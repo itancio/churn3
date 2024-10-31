@@ -377,14 +377,6 @@ def create_df_from_paths(paths):
 
   return df.copy()
 
-
-# Load models
-xgb_model = load_model('https://drive.google.com/file/d/1rB4uIhRsbi-zQZWu_YPCu6kCho4Euuge/view?usp=sharing')
-gnb_model = load_model('https://drive.google.com/file/d/1FO0klLIbf4NW1NMNscKJM0CSe1osUzAw/view?usp=sharing')
-gnb_smote_model = load_model('https://drive.google.com/file/d/1vHxHZ_AR6wtDCjP4aaWj2e5d4LdBLfLJ/view?usp=sharing')
-xgb_smote_model = load_model('https://drive.google.com/file/d/1-9fCJP8XB2MT1svR1Eoc3IFWz0AxWUNj/view?usp=sharing')
-voting_model = load_model('https://drive.google.com/file/d/1_XKjA5nxj8kFAkSMxVpbPCdIL4c-LPoM/view?usp=sharing')
-
 def prepare_fraud_input(category, amount, age, gender, state, median_price):
   def group_age(age):
     if 0 <= age <= 31:
@@ -409,28 +401,43 @@ def prepare_fraud_input(category, amount, age, gender, state, median_price):
   input_df = pd.DataFrame([input_dict])
   return input_df, input_dict
 
+
+# Load models
+xgb_model = load_model('https://drive.google.com/file/d/1rB4uIhRsbi-zQZWu_YPCu6kCho4Euuge/view?usp=sharing')
+xgb_smote_model = load_model('https://drive.google.com/file/d/1-9fCJP8XB2MT1svR1Eoc3IFWz0AxWUNj/view?usp=sharing')
+gnb_model = load_model('https://drive.google.com/file/d/1FO0klLIbf4NW1NMNscKJM0CSe1osUzAw/view?usp=sharing')
+gnb_smote_model = load_model('https://drive.google.com/file/d/1vHxHZ_AR6wtDCjP4aaWj2e5d4LdBLfLJ/view?usp=sharing')
+voting_model = load_model('https://drive.google.com/file/d/1_XKjA5nxj8kFAkSMxVpbPCdIL4c-LPoM/view?usp=sharing')
+dtc_model = load_model('https://drive.google.com/file/d/1LU5MBJUWU_o0n625vKWoQ8BG6WnpknHo/view?usp=sharing')
+dtc_smote_model = load_model('https://drive.google.com/file/d/1vQtF4PDz0EXo4UecLv083uYahpltp4jd/view?usp=sharing')
 def make_fraud_predictions(input_df, input_dict):
   # Make predictions
   xgb_predict = xgb_model.predict_proba(input_df)[0][1],
-  nb_predict = naive_bayes_model.predict_proba(input_df)[0][1],
-  gnb_smote_predict = gnb_smote_model.predict_proba(input_df)[0][1],
   xgb_smote_predict = xgb_smote_model.predict_proba(input_df)[0][1],
+  gnb_predict = gnb_model.predict_proba(input_df)[0][1],
+  gnb_smote_predict = gnb_smote_model.predict_proba(input_df)[0][1],
   voting_predict = voting_model.predict_proba(input_df)[0][1],
+  dtc_predict = dtc_model.predict_proba(input_df)[0][1],
+  dtc_smote_predict = dtc_smote_model.predict_proba(input_df)[0][1],
 
   xgb_predict = xgb_predict[0]
-  nb_predict = nb_predict[0]
-  gnb_smote_predict = gnb_smote_predict[0]
   xgb_smote_predict = xgb_smote_predict[0]
+  gnb_predict = gnb_predict[0]
+  gnb_smote_predict = gnb_smote_predict[0]
   voting_predict = voting_predict[0]
+  dtc_predict = dtc_predict[0]
+  dtc_smote_predict = dtc_smote_predict[0]
 
   probabilities = {}
 
   # Filter out predictions that are very close to zero
   min_threshold = 0.0000001
   if xgb_predict >= min_threshold: probabilities['XGBoost'] = xgb_predict
-  if nb_predict >= min_threshold: probabilities['Naive Bayes'] = nb_predict
-  if gnb_smote_predict >= min_threshold: probabilities['Naive Bayes (SMOTE)'] = gnb_smote_predict
   if xgb_smote_predict >= min_threshold: probabilities['XGBoost (SMOTE)'] = xgb_smote_predict
+  if gnb_predict >= min_threshold: probabilities['Naive Bayes'] = gnb_predict
+  if gnb_smote_predict >= min_threshold: probabilities['Naive Bayes (SMOTE)'] = gnb_smote_predict
+  if dtc_predict >= min_threshold: probabilities['Decision Tree'] = dtc_predict
+  if dtc_smote_predict >= min_threshold: probabilities['Decision Tree (SMOTE)'] = dtc_smote_predict
   if voting_predict >= min_threshold: probabilities['Voting'] = voting_predict
   
   print(probabilities)
@@ -550,7 +557,6 @@ def generate_fraud_email(probability, input_dict, explanation, surname):
   print("\n\nEMAIL PROMPT", systemPrompt)
   
   return raw_response.choices[0].message.content
-
 
 with tab2:
   st.title("Fraud Detection Predictions")
@@ -702,6 +708,8 @@ with tab2:
     selected_transaction_id = selected_transaction_option.split(" - ")[1]
     selected_transaction = df.loc[df['trans_num'] == selected_transaction_id].to_dict(orient='records')
 
+    print('selected: ', selected_transaction)
+
     customer_first = selected_transaction[0]['first']
     customer_last = selected_transaction[0]['last']
     customer_gender = selected_transaction[0]['gender']
@@ -795,7 +803,7 @@ with tab2:
     print('selected: ', gender, age, state, category, amount)
     
     fraud_input_df, fraud_input_dict = prepare_fraud_input(category, amount, age, gender, state, median_price)
-    print(input_df)
+    print(fraud_input_df)
 
     fraud_avg_probability = make_fraud_predictions(fraud_input_df, fraud_input_dict)
     print(fraud_avg_probability)
