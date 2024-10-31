@@ -444,11 +444,11 @@ def make_fraud_predictions(input_df, input_dict):
   if dtc_tomek_predict >= min_threshold: probabilities['Decision Tree (Tomek)'] = dtc_tomek_predict
   if rfc_predict >= min_threshold: probabilities['Random Forest (featured)'] = rfc_predict
   if rfc_tomek_predict >= min_threshold: probabilities['Random Forest (Tomek)'] = rfc_tomek_predict
-  if voting_model >= min_threshold: probabilities['Voting (featured)'] = voting_model
-  if voting_tomek_model >= min_threshold: probabilities['Voting (Tomek)'] = voting_tomek_model
-  if xgb_model >= min_threshold: probabilities['XGBoost (featured))'] = xgb_model
-  if xgb_smote_tomek_model >= min_threshold: probabilities['XGBoost (Smote-Tomek)'] = xgb_smote_tomek_model
-  if xgb_tomek_model >= min_threshold: probabilities['XGBoost (Tomek)'] = xgb_tomek_model
+  if voting_predict >= min_threshold: probabilities['Voting (featured)'] = voting_predict
+  if voting_tomek_predict >= min_threshold: probabilities['Voting (Tomek)'] = voting_tomek_predict
+  if xgb_predict >= min_threshold: probabilities['XGBoost (featured))'] = xgb_predict
+  if xgb_smote_tomek_predict >= min_threshold: probabilities['XGBoost (Smote-Tomek)'] = xgb_smote_tomek_predict
+  if xgb_tomek_predict >= min_threshold: probabilities['XGBoost (Tomek)'] = xgb_tomek_predict
   
   print(probabilities)
 
