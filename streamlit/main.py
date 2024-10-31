@@ -17,7 +17,24 @@ print('Numpy verstion: ', np.__version__)
 print('Pandas verstion: ', pd.__version__)
 print('Sklearn verstion: ', sk.__version__)
 
+@st.cache_data
+def create_df_from_paths(paths):
+  processed_paths = ['https://drive.google.com/uc?id=' + path.split('/')[-2] for path in paths]
+  df_list = [pd.read_csv(path) for path in processed_paths]
 
+  # Concatenate all DataFrames into one
+  df = pd.concat(df_list, ignore_index=True)
+
+  # Reset the index and drop the 'Unnamed: 0' column if it exists
+  if 'Unnamed: 0' in df.columns:
+      df = df.drop(columns=['Unnamed: 0'])
+
+  # Resetting the index
+  df = df.reset_index(drop=True)
+
+  return df.copy()
+
+@st.cache_data
 def load_model(drive_url):
     # Extract the file ID from the Google Drive URL
     file_id = drive_url.split('/')[-2]
@@ -219,8 +236,8 @@ def generate_email(probability, input_dict, explanation, surname):
   {explanation}
 
   Generate an email to the customer based on their information,
-  asking them to stay if they are at risk of churning, or offerign them incentives
-  so taht they become more loyal to the bank.
+  asking them to stay if they are at risk of churning, or offer them incentives
+  so that they become more loyal to the bank.
 
   Make sure to list out a set of incentives to stay based on their information,
   in bullet point format. Don't ever mention the probability of churning, or
@@ -248,9 +265,11 @@ with tab1:
   st.title("Customer Churn Prediction")
 
   # Load dataset
-  path = "https://drive.google.com/file/d/1MPlc5ZehNm8QgxRrLzODcLW7xurcRhgh/view?usp=drive_link"
-  path = 'https://drive.google.com/uc?id=' + path.split('/')[-2]
-  df = pd.read_csv(path)
+  
+  paths = [
+    "https://drive.google.com/file/d/1MPlc5ZehNm8QgxRrLzODcLW7xurcRhgh/view?usp=drive_link"
+  ]
+  df = create_df_from_paths(paths)
 
   customers = [f"{row['CustomerId']} - {row['Surname']}" for _, row in df.iterrows()]
 
@@ -359,23 +378,6 @@ with tab1:
 
 
 ################################################################################################################################
-
-
-def create_df_from_paths(paths):
-  processed_paths = ['https://drive.google.com/uc?id=' + path.split('/')[-2] for path in paths]
-  df_list = [pd.read_csv(path) for path in processed_paths]
-
-  # Concatenate all DataFrames into one
-  df = pd.concat(df_list, ignore_index=True)
-
-  # Reset the index and drop the 'Unnamed: 0' column if it exists
-  if 'Unnamed: 0' in df.columns:
-      df = df.drop(columns=['Unnamed: 0'])
-
-  # Resetting the index
-  df = df.reset_index(drop=True)
-
-  return df.copy()
 
 def prepare_fraud_input(category, amount, age, gender, state, median_price):
   def group_age(age):
@@ -823,11 +825,14 @@ with tab2:
     explanation = explain_fraud_prediction(fraud_avg_probability, fraud_input_dict, customer_last)
     st.markdown(explanation)
 
+    
     st.markdown('---')
-    st.subheader('Personalized Email')
-    email = generate_fraud_email(avg_probability, input_dict, explanation, customer_surname)
-    st.markdown(email)
-
+    if fraud_avg_probability >= 0.30:
+      st.subheader('Personalized Email')
+      email = generate_fraud_email(fraud_avg_probability, fraud_input_dict, explanation, customer_last)
+      st.markdown(email)
+    else:
+      st.markdown(":green[No Fraud Activity detected. Your account looks good.]")
 
       
 
