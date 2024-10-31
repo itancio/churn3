@@ -87,7 +87,6 @@ def prepare_input(credit_score, location, gender, age, tenure, balance, num_prod
     'AgeGroup_Senior' : 1 if 45 <= age < 59 else 0,
     'AgeGroup_Elderly' : 1 if age >= 45 else 0,
   }
-
   input_df = pd.DataFrame([input_dict])
   return input_df, input_dict
 
@@ -213,15 +212,20 @@ def explain_prediction(probability, input_dict, surname):
 
   print("EXPLANATION PROMPT", systemPrompt)
 
-  raw_response = client.chat.completions.create(
+  stream = client.chat.completions. create(
     model='gpt-4o-mini',
     messages=[{
       'role': 'user',
       'content': systemPrompt
-    }]
+    }],
+    stream=True
   )
 
-  return raw_response.choices[0].message.content
+  print("\n\nEMAIL PROMPT", systemPrompt)
+
+  for chunk  in stream:
+    if chunk.choices[0].delta.content is not None:
+        yield chunk.choices[0].delta.content
 
 def generate_email(probability, input_dict, explanation, surname):
   systemPrompt = f"""
@@ -244,17 +248,21 @@ def generate_email(probability, input_dict, explanation, surname):
   the machine learning model to the customer.
   """
 
-  raw_response = client.chat.completions. create(
+  stream = client.chat.completions. create(
     model='gpt-4o-mini',
     messages=[{
       'role': 'user',
       'content': systemPrompt
-    }]
+    }],
+    stream=True
   )
 
   print("\n\nEMAIL PROMPT", systemPrompt)
+
+  for chunk  in stream:
+    if chunk.choices[0].delta.content is not None:
+        yield chunk.choices[0].delta.content
   
-  return raw_response.choices[0].message.content
 
 tab1, tab2 = st.tabs([
   "Customer Churn Prediction",
@@ -367,12 +375,12 @@ with tab1:
     st.markdown('---')
     st.subheader('Explanation of Prediction')
     explanation = explain_prediction(avg_probability, input_dict, customer_surname)
-    st.markdown(explanation)
+    st.write_stream(explanation)
 
     st.markdown('---')
     st.subheader('Personalized Email')
     email = generate_email(avg_probability, input_dict, explanation, customer_surname)
-    st.markdown(email)
+    st.write_stream(email)
 
 
 
@@ -525,15 +533,18 @@ def explain_fraud_prediction(probability, input_dict, surname):
 
   print("EXPLANATION PROMPT", systemPrompt)
 
-  raw_response = client.chat.completions.create(
+  stream = client.chat.completions. create(
     model='gpt-4o-mini',
     messages=[{
       'role': 'user',
       'content': systemPrompt
-    }]
+    }],
+    stream=True
   )
 
-  return raw_response.choices[0].message.content
+  for chunk  in stream:
+    if chunk.choices[0].delta.content is not None:
+        yield chunk.choices[0].delta.content
 
 def generate_fraud_email(probability, input_dict, explanation, surname):
   systemPrompt = f"""
@@ -558,17 +569,28 @@ def generate_fraud_email(probability, input_dict, explanation, surname):
   the machine learning model to the customer.
   """
 
-  raw_response = client.chat.completions. create(
+  stream = client.chat.completions. create(
     model='gpt-4o-mini',
     messages=[{
       'role': 'user',
       'content': systemPrompt
-    }]
+    }],
+    stream=True
   )
 
   print("\n\nEMAIL PROMPT", systemPrompt)
-  
-  return raw_response.choices[0].message.content
+
+  for chunk  in stream:
+    if chunk.choices[0].delta.content is not None:
+        yield chunk.choices[0].delta.content
+@st.cache_data
+def select_samples(df, size):
+  sample_df = pd.concat([
+      df[df['is_fraud'] == 0].sample(n=size, random_state=42, replace=True),
+      df[df['is_fraud'] == 1].sample(n=size, random_state=42, replace=True)
+  ]).reset_index(drop=True)
+
+  return sample_df
 
 with tab2:
   st.title("Fraud Detection Predictions")
@@ -619,10 +641,13 @@ with tab2:
     "https://drive.google.com/file/d/1twtyCBtyffRvFf6-JbXNCEcCKo-fPrOi/view?usp=sharing"
   ]
 
-  df = create_df_from_paths(paths)
+  raw_df = create_df_from_paths(paths)
 
   # Needed for the map
-  df = df.rename(columns={'long' : 'lon'})
+  raw_df = raw_df.rename(columns={'long' : 'lon'})
+
+  # Select 1000 rows where is_fraud is 0 and 1000 rows where is_fraud is 1
+  df = select_samples(raw_df, 10)
 
   mappings = {
     'ageGroup': {
@@ -745,7 +770,7 @@ with tab2:
     selected_is_fraud = selected_transaction[0]['is_fraud']
 
 
-    st.map(selected_transaction, latitude=customer_lat, longitude=customer_long, color="#0044ff", zoom=7.5,)
+    st.map(selected_transaction, latitude=customer_lat, longitude=customer_long, color="#0044ff", zoom=5,)
 
     col1, col2 = st.columns(2)
 
@@ -772,9 +797,9 @@ with tab2:
       ''')
 
       if selected_is_fraud:
-        st.markdown('**:green[Status:] :red[Detected fraudulent activity]**')
+        st.markdown(f'**:green[Status code: {selected_is_fraud}] :red[Detected fraudulent activity]**')
       else:
-        st.markdown('**:green[Status: Clear]**')
+        st.markdown(f'**:green[Status code: {selected_is_fraud} Clear]**')
 
     st.title("Prediction Parameters")
     st.markdown("Adjust the parameters to observe changes in probabilities or predictions.")
@@ -785,7 +810,7 @@ with tab2:
       with col3:
         gender = st.radio(
           'Gender', genders,
-          index=1 if customer_gender=='1 - Male' else 0
+          index=1 if customer_gender=='M' else 0
         )
 
         age = st.number_input(
@@ -823,14 +848,14 @@ with tab2:
     st.markdown('---')
     st.subheader('Explanation of Prediction')
     explanation = explain_fraud_prediction(fraud_avg_probability, fraud_input_dict, customer_last)
-    st.markdown(explanation)
+    st.write_stream(explanation)
 
     
     st.markdown('---')
     if fraud_avg_probability >= 0.30:
       st.subheader('Personalized Email')
       email = generate_fraud_email(fraud_avg_probability, fraud_input_dict, explanation, customer_last)
-      st.markdown(email)
+      st.write_stream(email)
     else:
       st.markdown(":green[No Fraud Activity detected. Your account looks good.]")
 
