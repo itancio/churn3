@@ -403,42 +403,52 @@ def prepare_fraud_input(category, amount, age, gender, state, median_price):
 
 
 # Load models
-xgb_model = load_model('https://drive.google.com/file/d/1rB4uIhRsbi-zQZWu_YPCu6kCho4Euuge/view?usp=sharing')
-xgb_smote_model = load_model('https://drive.google.com/file/d/1-9fCJP8XB2MT1svR1Eoc3IFWz0AxWUNj/view?usp=sharing')
-gnb_model = load_model('https://drive.google.com/file/d/1FO0klLIbf4NW1NMNscKJM0CSe1osUzAw/view?usp=sharing')
-gnb_smote_model = load_model('https://drive.google.com/file/d/1vHxHZ_AR6wtDCjP4aaWj2e5d4LdBLfLJ/view?usp=sharing')
-voting_model = load_model('https://drive.google.com/file/d/1_XKjA5nxj8kFAkSMxVpbPCdIL4c-LPoM/view?usp=sharing')
 dtc_model = load_model('https://drive.google.com/file/d/1LU5MBJUWU_o0n625vKWoQ8BG6WnpknHo/view?usp=sharing')
-dtc_smote_model = load_model('https://drive.google.com/file/d/1vQtF4PDz0EXo4UecLv083uYahpltp4jd/view?usp=sharing')
+dtc_tomek_model = load_model('https://drive.google.com/file/d/1PVIMW72KGBxaL_bD95EquDiQI2FXjOgA/view?usp=sharing')
+rfc_model = load_model('https://drive.google.com/file/d/1jISeERC7aF1Vnt6iwzubAYHKhmU1OtTP/view?usp=sharing')
+rfc_tomek_model = load_model('https://drive.google.com/file/d/1j4iV9pIlKDudGs1vMAiGx1i5ozsMO_Yw/view?usp=sharing')
+voting_model = load_model('https://drive.google.com/file/d/1_XKjA5nxj8kFAkSMxVpbPCdIL4c-LPoM/view?usp=sharing')
+voting_tomek_model = load_model('https://drive.google.com/file/d/1FaYGtJkF_udOf5BUWciAEPTj6miwrRnl/view?usp=sharing')
+xgb_model = load_model('https://drive.google.com/file/d/1rB4uIhRsbi-zQZWu_YPCu6kCho4Euuge/view?usp=sharing')
+xgb_smote_tomek_model = load_model('https://drive.google.com/file/d/1le7e_rnZmE8c_oPz2OuLLqlJhE9f7wF4/view?usp=sharing')
+xgb_tomek_model = load_model('https://drive.google.com/file/d/1ZC-63VRrvCszXM0Vw1NaVdGyLGCrlQb-/view?usp=sharing')
+
+
 def make_fraud_predictions(input_df, input_dict):
   # Make predictions
-  xgb_predict = xgb_model.predict_proba(input_df)[0][1],
-  xgb_smote_predict = xgb_smote_model.predict_proba(input_df)[0][1],
-  gnb_predict = gnb_model.predict_proba(input_df)[0][1],
-  gnb_smote_predict = gnb_smote_model.predict_proba(input_df)[0][1],
-  voting_predict = voting_model.predict_proba(input_df)[0][1],
   dtc_predict = dtc_model.predict_proba(input_df)[0][1],
-  dtc_smote_predict = dtc_smote_model.predict_proba(input_df)[0][1],
+  dtc_tomek_predict = dtc_tomek_model.predict_proba(input_df)[0][1],
+  rfc_predict = rfc_model.predict_proba(input_df)[0][1],
+  rfc_tomek_predict = rfc_tomek_model.predict_proba(input_df)[0][1],
+  voting_predict = voting_model.predict_proba(input_df)[0][1],
+  voting_tomek_predict = voting_tomek_model.predict_proba(input_df)[0][1],
+  xgb_predict = xgb_model.predict_proba(input_df)[0][1],
+  xgb_smote_tomek_predict = xgb_smote_tomek_model.predict_proba(input_df)[0][1],
+  xgb_tomek_predict = xgb_tomek_model.predict_proba(input_df)[0][1],
 
-  xgb_predict = xgb_predict[0]
-  xgb_smote_predict = xgb_smote_predict[0]
-  gnb_predict = gnb_predict[0]
-  gnb_smote_predict = gnb_smote_predict[0]
-  voting_predict = voting_predict[0]
   dtc_predict = dtc_predict[0]
-  dtc_smote_predict = dtc_smote_predict[0]
+  dtc_tomek_predict = dtc_tomek_predict[0]
+  rfc_predict = rfc_predict[0]
+  rfc_tomek_predict = rfc_tomek_predict[0]
+  voting_predict = voting_predict[0]
+  voting_tomek_predict = voting_tomek_predict[0]
+  xgb_predict = xgb_predict[0]
+  xgb_smote_tomek_predict = xgb_smote_tomek_predict[0]
+  xgb_tomek_predict = xgb_tomek_predict[0]
 
   probabilities = {}
 
   # Filter out predictions that are very close to zero
   min_threshold = 0.0000001
-  if xgb_predict >= min_threshold: probabilities['XGBoost'] = xgb_predict
-  if xgb_smote_predict >= min_threshold: probabilities['XGBoost (SMOTE)'] = xgb_smote_predict
-  if gnb_predict >= min_threshold: probabilities['Naive Bayes'] = gnb_predict
-  if gnb_smote_predict >= min_threshold: probabilities['Naive Bayes (SMOTE)'] = gnb_smote_predict
-  if dtc_predict >= min_threshold: probabilities['Decision Tree'] = dtc_predict
-  if dtc_smote_predict >= min_threshold: probabilities['Decision Tree (SMOTE)'] = dtc_smote_predict
-  if voting_predict >= min_threshold: probabilities['Voting'] = voting_predict
+  if dtc_predict >= min_threshold: probabilities['Decision Tree (featured)'] = dtc_predict
+  if dtc_tomek_predict >= min_threshold: probabilities['Decision Tree (Tomek)'] = dtc_tomek_predict
+  if rfc_predict >= min_threshold: probabilities['Random Forest (featured)'] = rfc_predict
+  if rfc_tomek_predict >= min_threshold: probabilities['Random Forest (Tomek)'] = rfc_tomek_predict
+  if voting_model >= min_threshold: probabilities['Voting (featured)'] = voting_model
+  if voting_tomek_model >= min_threshold: probabilities['Voting (Tomek)'] = voting_tomek_model
+  if xgb_model >= min_threshold: probabilities['XGBoost (featured))'] = xgb_model
+  if xgb_smote_tomek_model >= min_threshold: probabilities['XGBoost (Smote-Tomek)'] = xgb_smote_tomek_model
+  if xgb_tomek_model >= min_threshold: probabilities['XGBoost (Tomek)'] = xgb_tomek_model
   
   print(probabilities)
 
