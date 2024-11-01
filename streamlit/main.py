@@ -407,34 +407,30 @@ def prepare_fraud_input(category, amount, age, gender, state, median_price, dist
     'ageGroup_codes' : get_ageGroup(age),
     'price_ratio_to_median' : amount / median_price,
     'distance' : distance,
-    'day_segment_code': int(day_segment.split(' - ')[0]),
+    'day_segment_codes': int(day_segment.split(' - ')[0]),
   }
 
   input_df = pd.DataFrame([input_dict])
   return input_df, input_dict
 
 # Load models
-dtc_model = load_model('https://drive.google.com/file/d/1LU5MBJUWU_o0n625vKWoQ8BG6WnpknHo/view?usp=sharing')
+dtc_model = load_model('https://drive.google.com/file/d/1SfyXL_lvS1aQjWZGEOQ1_PnSQbG94ZW2/view?usp=sharing')
 dtc_tomek_model = load_model('https://drive.google.com/file/d/1PVIMW72KGBxaL_bD95EquDiQI2FXjOgA/view?usp=sharing')
 rfc_model = load_model('https://drive.google.com/file/d/1jISeERC7aF1Vnt6iwzubAYHKhmU1OtTP/view?usp=sharing')
 rfc_tomek_model = load_model('https://drive.google.com/file/d/1j4iV9pIlKDudGs1vMAiGx1i5ozsMO_Yw/view?usp=sharing')
-voting_model = load_model('https://drive.google.com/file/d/1_XKjA5nxj8kFAkSMxVpbPCdIL4c-LPoM/view?usp=sharing')
-voting_tomek_model = load_model('https://drive.google.com/file/d/1FaYGtJkF_udOf5BUWciAEPTj6miwrRnl/view?usp=sharing')
+voting_model = load_model('https://drive.google.com/file/d/1-QeJX8srmSLXoDXvYIwU7_dReHTYVza4/view?usp=sharing')
 xgb_model = load_model('https://drive.google.com/file/d/1rB4uIhRsbi-zQZWu_YPCu6kCho4Euuge/view?usp=sharing')
-xgb_smote_tomek_model = load_model('https://drive.google.com/file/d/1le7e_rnZmE8c_oPz2OuLLqlJhE9f7wF4/view?usp=sharing')
 xgb_tomek_model = load_model('https://drive.google.com/file/d/1ZC-63VRrvCszXM0Vw1NaVdGyLGCrlQb-/view?usp=sharing')
 
 
-def make_fraud_predictions(input_df, input_dict):
+def make_fraud_predictions(input_df):
   # Make predictions
   dtc_predict = dtc_model.predict_proba(input_df)[0][1],
   dtc_tomek_predict = dtc_tomek_model.predict_proba(input_df)[0][1],
   rfc_predict = rfc_model.predict_proba(input_df)[0][1],
   rfc_tomek_predict = rfc_tomek_model.predict_proba(input_df)[0][1],
   voting_predict = voting_model.predict_proba(input_df)[0][1],
-  voting_tomek_predict = voting_tomek_model.predict_proba(input_df)[0][1],
   xgb_predict = xgb_model.predict_proba(input_df)[0][1],
-  xgb_smote_tomek_predict = xgb_smote_tomek_model.predict_proba(input_df)[0][1],
   xgb_tomek_predict = xgb_tomek_model.predict_proba(input_df)[0][1],
 
   dtc_predict = dtc_predict[0]
@@ -442,9 +438,7 @@ def make_fraud_predictions(input_df, input_dict):
   rfc_predict = rfc_predict[0]
   rfc_tomek_predict = rfc_tomek_predict[0]
   voting_predict = voting_predict[0]
-  voting_tomek_predict = voting_tomek_predict[0]
   xgb_predict = xgb_predict[0]
-  xgb_smote_tomek_predict = xgb_smote_tomek_predict[0]
   xgb_tomek_predict = xgb_tomek_predict[0]
 
   probabilities = {}
@@ -456,9 +450,7 @@ def make_fraud_predictions(input_df, input_dict):
   if rfc_predict >= min_threshold: probabilities['Random Forest (featured)'] = rfc_predict
   if rfc_tomek_predict >= min_threshold: probabilities['Random Forest (Tomek)'] = rfc_tomek_predict
   if voting_predict >= min_threshold: probabilities['Voting (featured)'] = voting_predict
-  if voting_tomek_predict >= min_threshold: probabilities['Voting (Tomek)'] = voting_tomek_predict
   if xgb_predict >= min_threshold: probabilities['XGBoost (featured))'] = xgb_predict
-  if xgb_smote_tomek_predict >= min_threshold: probabilities['XGBoost (Smote-Tomek)'] = xgb_smote_tomek_predict
   if xgb_tomek_predict >= min_threshold: probabilities['XGBoost (Tomek)'] = xgb_tomek_predict
   
   print(probabilities)
@@ -804,7 +796,7 @@ with tab2:
         :green[Transaction ID:] {selected_transaction_id[:-6]} \n
         :green[Transaction Timestamp:] {selected_trans_date} \n
         :green[Merchant Name:] {selected_merchant} \n
-        :green[Distance: ] {selected_distance} miles \n
+        :green[Distance: ] {selected_distance: .2f} miles \n
         :green[Category: ] {selected_category.split(' - ')[1]} \n
         :green[Amount: ] $ {selected_amt} \n
       ''')
@@ -844,9 +836,11 @@ with tab2:
           index=categories.index(selected_category)
         )
 
+        print('daySegments', daySegments, 'selected_day_segment', selected_day_segment)
+
         day_segment = st.selectbox(
           "Day Segments", daySegments,
-          index=categories.index(selected_day_segment)
+          index=daySegments.index(selected_day_segment)
         )
 
         distance = st.number_input(
@@ -866,7 +860,7 @@ with tab2:
     fraud_input_df, fraud_input_dict = prepare_fraud_input(category, amount, age, gender, state, median_price, distance, day_segment)
     print(fraud_input_df)
 
-    fraud_avg_probability = make_fraud_predictions(fraud_input_df, fraud_input_dict)
+    fraud_avg_probability = make_fraud_predictions(fraud_input_df)
     print(fraud_avg_probability)
 
     st.markdown('---')
