@@ -1,6 +1,7 @@
 # Customer Churn and Fraud Prediction with Machine Learning
 
-[Demo](https://youtu.be/Mz1d4B9IB4Y)
+[Churn Demo](https://youtu.be/Mz1d4B9IB4Y)
+[Fraud Demo](https://youtu.be/DX_nzzaNykM)
 
 Description:
 
