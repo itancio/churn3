@@ -387,8 +387,8 @@ with tab1:
 
 ################################################################################################################################
 
-def prepare_fraud_input(category, amount, age, gender, state, median_price):
-  def group_age(age):
+def prepare_fraud_input(category, amount, age, gender, state, median_price, distance, day_segment):
+  def get_ageGroup(age):
     if 0 <= age <= 31:
       return 0
     elif 32 <= age <= 47:
@@ -401,16 +401,17 @@ def prepare_fraud_input(category, amount, age, gender, state, median_price):
   input_dict = {
     'amt' : amount,
     'age' : age,
-    'price_ratio_to_median' : amount / median_price,
-    'category_codes' : int(category.split(' - ')[0]),
     'state_codes' : int(state.split(' - ')[0]),
-    'ageGroup_codes' : group_age(age),
     'gender_codes' : int(gender.split(' - ')[0]),
+    'category_codes' : int(category.split(' - ')[0]),
+    'ageGroup_codes' : get_ageGroup(age),
+    'price_ratio_to_median' : amount / median_price,
+    'distance' : distance,
+    'day_segment_code': int(day_segment.split(' - ')[0]),
   }
 
   input_df = pd.DataFrame([input_dict])
   return input_df, input_dict
-
 
 # Load models
 dtc_model = load_model('https://drive.google.com/file/d/1LU5MBJUWU_o0n625vKWoQ8BG6WnpknHo/view?usp=sharing')
@@ -508,6 +509,8 @@ def explain_fraud_prediction(probability, input_dict, surname):
   state_codes	          0.072448
   gender_codes	        0.016715
   ageGroup_codes	      0.011958
+
+  %%%%%%%%%%%%%%%%%%%%% TODO
   
 
   {pd.set_option('display.max_columns', None)}
@@ -670,6 +673,11 @@ with tab2:
       11: 'shopping_net',
       12: 'shopping_pos',
       13: 'travel'},
+    'day_segment': {
+      0: 'Owl', 
+      1: 'Morning', 
+      2: 'Afternoon', 
+      3: 'Evening'},
     'gender': {
       0: 'F', 
       1: 'M'},
@@ -724,7 +732,7 @@ with tab2:
       47: 'WA',
       48: 'WI',
       49: 'WV',
-      50: 'WY'}
+      50: 'WY'},
     }
 
   # Create lists
@@ -734,6 +742,7 @@ with tab2:
   ageGroups = [f'{k} - {v}' for k, v in mappings['ageGroup'].items()]
   genders = [f'{k} - {v}' for k, v in mappings['gender'].items()]
   states = [f'{k} - {v}' for k, v in mappings['state'].items()]
+  daySegments = [f'{k} - {v}' for k, v in mappings['day_segment'].items()]
 
   median_price = df['amt'].median()
 
@@ -767,6 +776,9 @@ with tab2:
     selected_trans_date = selected_transaction[0]['trans_date_trans_time']
     selected_category = f"{selected_transaction[0]['category_codes']} - {selected_transaction[0]['category']}"
     selected_amt = selected_transaction[0]['amt']
+
+    selected_distance = selected_transaction[0]['distance']
+    selected_day_segment = f"{selected_transaction[0]['day_segment_codes']} - {selected_transaction[0]['day_segment']}"
     selected_is_fraud = selected_transaction[0]['is_fraud']
 
 
@@ -792,6 +804,7 @@ with tab2:
         :green[Transaction ID:] {selected_transaction_id[:-6]} \n
         :green[Transaction Timestamp:] {selected_trans_date} \n
         :green[Merchant Name:] {selected_merchant} \n
+        :green[Distance: ] {selected_distance} miles \n
         :green[Category: ] {selected_category.split(' - ')[1]} \n
         :green[Amount: ] $ {selected_amt} \n
       ''')
@@ -831,15 +844,26 @@ with tab2:
           index=categories.index(selected_category)
         )
 
+        day_segment = st.selectbox(
+          "Day Segments", daySegments,
+          index=categories.index(selected_day_segment)
+        )
+
+        distance = st.number_input(
+          "Distance",
+          min_value = 0.0,
+          value = selected_distance
+        )
+
         amount = st.number_input(
           "Transaction amount",
           min_value = 0.0,
           value = selected_amt
         )
 
-    print('selected: ', gender, age, state, category, amount)
+
     
-    fraud_input_df, fraud_input_dict = prepare_fraud_input(category, amount, age, gender, state, median_price)
+    fraud_input_df, fraud_input_dict = prepare_fraud_input(category, amount, age, gender, state, median_price, distance, day_segment)
     print(fraud_input_df)
 
     fraud_avg_probability = make_fraud_predictions(fraud_input_df, fraud_input_dict)
